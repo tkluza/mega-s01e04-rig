@@ -1,8 +1,9 @@
 ---
 plan: morning-digest
-status: ready
+status: done
 owner: rook
 opened: 2026-10-29
+closed: 2026-11-01
 ---
 
 # Morning digest
@@ -77,3 +78,23 @@ page again with `LANE_MARKER` unset (the banner reads "no marker set") and uploa
 link. Move this plan to `docs/plans/done/` with its issue list.
 
 Done when: the preview link no longer shows the lane marker.
+
+## Issues
+
+| # | Issue | Blocked by |
+|---|-------|------------|
+| [#1](https://github.com/tkluza/mega-s01e04-rig/issues/1) | Kontrakt digestu | — |
+| [#2](https://github.com/tkluza/mega-s01e04-rig/issues/2) | Czytnik JSONL | #1 |
+| [#3](https://github.com/tkluza/mega-s01e04-rig/issues/3) | Strona digestu | #1 |
+| [#4](https://github.com/tkluza/mega-s01e04-rig/issues/4) | Endpoint JSON | #1 |
+| [#5](https://github.com/tkluza/mega-s01e04-rig/issues/5) | Linki na tablicy | #1 |
+| [#6](https://github.com/tkluza/mega-s01e04-rig/issues/6) | Testy tras | #1; końcowa weryfikacja po trasach |
+| [#7](https://github.com/tkluza/mega-s01e04-rig/issues/7) | Podgląd do review | #2, #3, #4, #5, #6 |
+| [#8](https://github.com/tkluza/mega-s01e04-rig/issues/8) | Sprzątanie po review | #7 |
+
+## Review i sprzątanie
+
+Recenzent potwierdził obejrzenie podglądu 1 listopada 2026. Zakończenie planu wymaga
+nadpisania tego samego publicznego adresu wersją z wyłączonym `LANE_MARKER` oraz
+sprawdzenia napisu `no marker set` zgodnie z ADR 0003. Issue #8 jest zamykane dopiero
+po tej weryfikacji; stan i komentarze wykonania pozostają na GitHubie.
