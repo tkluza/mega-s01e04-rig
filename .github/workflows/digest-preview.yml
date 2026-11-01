@@ -1,0 +1,69 @@
+name: Publish digest preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      include_marker:
+        description: Include the lane marker for review (disable for cleanup)
+        type: boolean
+        default: false
+        required: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: digest-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # Reads the pinned version and integrity from packageManager.
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+      - run: pnpm typecheck
+      - name: Export only the sample digest
+        shell: bash
+        env:
+          INCLUDE_MARKER: ${{ inputs.include_marker }}
+          LANE_MARKER: ${{ inputs.include_marker && vars.LANE_MARKER || '' }}
+        run: |
+          set -euo pipefail
+          if [[ "$INCLUDE_MARKER" == true && -z "${LANE_MARKER//[[:space:]]/}" ]]; then
+            echo 'Set the repository Actions variable LANE_MARKER before including it.' >&2
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/site"
+          pnpm exec tsx --eval 'import { serve } from "@hono/node-server"; import { createApp } from "./src/app.tsx"; import { loadConfig } from "./src/config.ts"; serve({ fetch: createApp(loadConfig()).fetch, hostname: "127.0.0.1", port: 18787 });' &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
+          curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 1 http://127.0.0.1:18787/digest/2026-10-28 -o "$RUNNER_TEMP/site/index.html"
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          import { readFileSync, readdirSync } from 'node:fs';
+          const dir = `${process.env.RUNNER_TEMP}/site`;
+          const html = readFileSync(`${dir}/index.html`, 'utf8');
+          assert.deepEqual(readdirSync(dir), ['index.html']);
+          assert.equal((html.match(/<th scope="row">/g) ?? []).length, 5);
+          assert.doesNotMatch(html, /<script\b|\b(?:src|href)\s*=|@import|url\s*\(/i);
+          const escape = value => value.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+          const marker = process.env.LANE_MARKER?.trim() || 'no marker set';
+          assert.ok(html.includes(`<span class="marker">${escape(marker)}</span>`));
+          JS
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ runner.temp }}/site
+      - uses: actions/deploy-pages@v4
+        id: deployment
